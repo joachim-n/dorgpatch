@@ -111,7 +111,7 @@ if (!isset($comment_number)) {
 if ($comment_number == '?') {
   // Set the user-agent for the request to drupal.org's API, to be polite.
   // See https://www.drupal.org/api
-  ini_set('user_agent', "Joachim's patchname generator script.");
+  ini_set('user_agent', "dorgpatch - https://github.com/joachim-n/dorgpatch.");
   $response = file_get_contents("https://www.drupal.org/api-d7/node.json?nid=$issue_number");
   $response = json_decode($response);
   //drush_print_r($response);

@@ -1,0 +1,158 @@
+#!/usr/bin/env drush
+<?php
+/**
+ * @file
+ * Drush shell script for creating a patch for your Drupal module.
+ * Requires the following setup:
+ *
+ *  - You are on a git feature branch for your issue.
+ *  - The branch name is of the format '1234-description-of-issue' where 1234
+ *    is the drupal.org issue number.
+ *  - The feature branch is rebased to the major development branch you want to
+ *    diff against.
+ *  - All your work is committed.
+ *
+ * Optional, to support a 'tests-only' patch:
+ *  - Your changes to tests are all on a branch whose name is of the format
+ *    '1234-tests'. This should be merged into your feature branch.
+ *
+ * Pass a parameter to give a comment number for the issue. Alternatively, the
+ * script can query drupal.org's API to get the number for the next comment on
+ * the issue.
+ */
+
+// Get args.
+while ($arg = drush_shift()) {
+  $comment_number = $arg;
+}
+
+// Change directory to the actual place this script was run from, as Drush puts
+// us in the Drupal root.
+chdir(drush_cwd());
+
+// Get the module name.
+$current_module = basename(drush_cwd());
+
+// Allow for module folders to have a suffix. (E.g., I might have views-6 and
+// views-7 in my sandbox folder.)
+$current_module = preg_replace("@-.*$@", '', $current_module);
+
+// Get the branches that are reachable.
+$branch_list = explode("\n", shell_exec("git branch --merged"));
+$branches = array();
+
+// Analyse the list of branches obtained from git.
+foreach ($branch_list as $branch) {
+  //print "$branch\n";
+
+  // Extract the branch mark and the branch name from the line.
+  $matches = array();
+  preg_match("@^(?P<mark>.)\s+(?P<name>\S+)@", $branch, $matches);
+
+  // There's a blank line in the output from git.
+  if (empty($matches['name'])) {
+    continue;
+  }
+
+  $branch_name = $matches['name'];
+
+  //drush_print_r($matches);
+
+  $branches[$matches['name']] = array();
+
+  // Identify the current branch from the '*' in the branch mark.
+  if ($matches['mark'] == '*') {
+    $current_branch = $branch_name;
+
+    // Unpick the name of the current branch: can an issue number be deduced?
+    $matches_2 = array();
+    preg_match("@(?P<issue>\d{5,})-?(?P<description>.+)@", $current_branch, $matches_2);
+    //drush_print_r($matches);
+
+    if (!empty($matches_2['issue'])) {
+      $issue_number = $matches_2['issue'];
+    }
+
+    if (!empty($matches_2['issue'])) {
+      $branch_description = $matches_2['description'];
+    }
+  }
+
+  // Identify the main development branch, of one of the following forms:
+  //  - '7.x-1.x'
+  //  - '7.x'
+  //  - '8.0.x'
+  if (preg_match("@(\d.x-\d+-x|\d.x|\d.\d+.x)@", $branch_name)) {
+    $master_branch = $branch_name;
+    //print "master branch: $master_branch\n";
+  }
+
+  // Identify a tests branch.
+  // The current branch SHOULD be the first one in the list, so it's safe to
+  // rely on it being known by now.
+  if (preg_match("@$issue_number-tests@", $branch_name)) {
+    $tests_branch = $branch_name;
+  }
+}
+
+drush_print("Detected module $current_module, with master branch $master_branch.");
+drush_print("Detected local branch is for issue $issue_number.");
+if (isset($tests_branch)) {
+  drush_print("Detected tests branch.");
+}
+
+//drush_print_r($branches);
+
+if (!isset($comment_number)) {
+  $comment_number = drush_prompt("Enter the comment number, or '?' to query drupal.org's API for it, or <enter> to skip", '', FALSE);
+}
+
+// Get the comment number from drupal.org's API.
+if ($comment_number == '?') {
+  // Set the user-agent for the request to drupal.org's API, to be polite.
+  // See https://www.drupal.org/api
+  ini_set('user_agent', "Joachim's patchname generator script.");
+  $response = file_get_contents("https://www.drupal.org/api-d7/node.json?nid=$issue_number");
+  $response = json_decode($response);
+  //drush_print_r($response);
+  $issue_node = $response->list[0];
+  $issue_node_comment_count = $issue_node->comment_count;
+
+  $comment_number = $issue_node_comment_count + 1;
+}
+
+if (!empty($comment_number)) {
+  $number = "$issue_number-$comment_number";
+}
+else {
+  $number = $issue_number;
+}
+
+$patch_name = "$number.$current_module.$branch_description.patch";
+
+shell_exec("git diff $master_branch > $patch_name");
+
+drush_print_r("Written patch $patch_name with diff from $master_branch to local branch.");
+
+// Optionally do a tests-only patch.
+if (isset($tests_branch)) {
+  $tests_patch_name = $patch_name = "$number.$current_module.$branch_description-tests-only.patch";
+
+  shell_exec("git checkout $tests_branch");
+  shell_exec("git diff $master_branch > $tests_patch_name");
+
+  drush_print_r("Written tests-only patch $tests_patch_name with diff from $tests_branch to local branch.");
+
+  // Switch back to the original branch.
+  shell_exec("git checkout -");
+}
+
+if (!empty($previous_comment_number)) {
+  $previous_patch_name = "$issue_number-$previous_comment_number.$current_module.$branch_description.patch";
+  if (!file_exists($previous_patch_name)) {
+    drush_print("File $previous_patch_name not found!");
+    exit();
+  }
+
+  shell_exec("diff -up $previous_patch_name $patch_name > $issue_number-$previous_comment_number-$comment_number.$current_module.$branch_description.diff");
+}

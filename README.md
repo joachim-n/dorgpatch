@@ -3,7 +3,7 @@ Drush shell script to create patches for drupal.org issues.
 
 Requires the following setup:
 
- * You are on a git feature branch for your issue.
+ - You are on a git feature branch for your issue.
  - The branch name is of the format '1234-description-of-issue' where 1234
    is the drupal.org issue number.
  - The feature branch is rebased to the major development branch you want to

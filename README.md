@@ -27,5 +27,5 @@ Suppose:
   - The most recent comment on www.drupal.org/node/1234 is #5.
 
 Then this script will create the following patch files, diffing from 8.x-4.x:
-  - 2457403-6.flag.fix-everything.patch
-  - 2457403-6.flag.fix-everything-tests-only.patch
+  - 1234-6.flag.fix-everything.patch
+  - 1234-6.flag.fix-everything-tests-only.patch

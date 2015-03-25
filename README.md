@@ -21,11 +21,11 @@ the issue.
 ## Example
 
 Suppose:
-  - you are in sites/all/modules/contrib/flag
-  - you are on branch '1234-fix-everything'
-  - there is also a branch '1234-tests'
-  - the most recent comment on www.drupal.org/node/1234 is #5
+  - You are in sites/all/modules/contrib/flag.
+  - You are on branch '1234-fix-everything', which branches off 8.x-4.x.
+  - There is also a branch '1234-tests', which branches off 8.x-4.x
+  - The most recent comment on www.drupal.org/node/1234 is #5.
 
-Then this script will create the files:
+Then this script will create the following patch files, diffing from 8.x-4.x:
   - 2457403-6.flag.fix-everything.patch
   - 2457403-6.flag.fix-everything-tests-only.patch

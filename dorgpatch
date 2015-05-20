@@ -41,11 +41,7 @@ $dry_run = drush_get_option(['dry-run', 'n']);
 chdir(drush_cwd());
 
 // Get the module name.
-$current_module = basename(drush_cwd());
-
-// Allow for module folders to have a suffix. (E.g., I might have views-6 and
-// views-7 in my sandbox folder.)
-$current_module = preg_replace("@-.*$@", '', $current_module);
+$current_module = get_current_module();
 
 // Get the branches that are reachable.
 $branch_list = explode("\n", shell_exec("git branch --merged"));
@@ -93,6 +89,12 @@ foreach ($branch_list as $branch) {
   //  - '7.x'
   //  - '8.0.x'
   if (preg_match("@(\d.x-\d+-x|\d.x|\d.\d+.x)@", $branch_name)) {
+    // Don't set the master branch if it's already been found; this avoids
+    // problems with multiple potential candidates.
+    if (isset($master_branch)) {
+      continue;
+    }
+
     $master_branch = $branch_name;
     //print "master branch: $master_branch\n";
   }
@@ -172,6 +174,28 @@ if (!empty($previous_patch_name)) {
   shell_exec("diff -up $previous_patch_name $patch_name > $interdiff_name");
 
   drush_print_r("Written interdiff $interdiff_name with diff from patch $previous_patch_name to new patch.");
+}
+
+/**
+ * Get the name of the current module, based on the working directory.
+ */
+function get_current_module() {
+  $working_dir = drush_cwd();
+
+  // Special case for core; I for one have Drupal installed in lots of funnily-
+  // named folders.
+  if (file_exists($working_dir . "/index.php")) {
+    return 'drupal';
+  }
+
+  // Get the module name.
+  $current_module = basename($working_dir);
+
+  // Allow for module folders to have a suffix. (E.g., I might have views-6 and
+  // views-7 in my sandbox folder.)
+  $current_module = preg_replace("@-.*$@", '', $current_module);
+
+  return $current_module;
 }
 
 /**

@@ -16,18 +16,23 @@
  *  - Your changes to tests are all on a branch whose name is of the format
  *    '1234-tests'. This should be merged into your feature branch.
  *
- * Pass a parameter to give a comment number for the issue. Alternatively, the
- * script can query drupal.org's API to get the number for the next comment on
- * the issue.
+ * The following optional parameters may be passed. If omitted, they will be
+ * prompted for.
+ *  - comment_number: the comment number for the issue. Alternatively, the
+ *    script can query drupal.org's API to get the number for the next comment
+ *    on the issue.
+ *  - previous_comment_number: TODO
  *
  * The following options may be used:
  *  - --dry-run, n: Don't write any files.
  */
 
 // Get args.
-while ($arg = drush_shift()) {
-  $comment_number = $arg;
-}
+$arg = drush_shift();
+$comment_number = $arg;
+
+$arg = drush_shift();
+$previous_comment_number = $arg;
 
 $dry_run = drush_get_option(['dry-run', 'n']);
 
@@ -157,12 +162,40 @@ if (isset($tests_branch)) {
   shell_exec("git checkout -");
 }
 
-if (!empty($previous_comment_number)) {
-  $previous_patch_name = "$issue_number-$previous_comment_number.$current_module.$branch_description.patch";
-  if (!file_exists($previous_patch_name)) {
-    drush_print("File $previous_patch_name not found!");
-    exit();
-  }
+$previous_patch_name = get_previous_patch($issue_number, $previous_comment_number);
+//drush_print_r($previous_patch_name);
 
-  shell_exec("diff -up $previous_patch_name $patch_name > $issue_number-$previous_comment_number-$comment_number.$current_module.$branch_description.diff");
+if (!empty($previous_patch_name)) {
+  // TODO: handle if no $previous_comment_number.
+  $interdiff_name = "$issue_number-$previous_comment_number-$comment_number.$current_module.$branch_description.interdiff.txt";
+
+  shell_exec("diff -up $previous_patch_name $patch_name > $interdiff_name");
+
+  drush_print_r("Written interdiff $interdiff_name with diff from patch $previous_patch_name to new patch.");
+}
+
+/**
+ * Find the previous patch to create an interdiff from.
+ */
+function get_previous_patch($issue_number, $previous_comment_number) {
+  if (!empty($previous_comment_number)) {
+    // First try to spot a previous patch name writen by this script.
+    $previous_patch_name = "$issue_number-$previous_comment_number.$current_module.$branch_description.patch";
+    if (file_exists($previous_patch_name)) {
+      return $previous_patch_name;
+    }
+
+    // Second, try to find any patchfile which contains both the issue number and
+    // previous comment number.
+    $directory_files = scandir(".");
+
+    //drush_print_r($directory_files);
+
+    foreach($directory_files as $file) {
+      if (preg_match("@\b($previous_comment_number\W$issue_number|$issue_number\W$previous_comment_number)\b.*\.patch$@", $file)) {
+        $previous_patch_name = $file;
+        return $previous_patch_name;
+      }
+    }
+  }
 }

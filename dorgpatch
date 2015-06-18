@@ -45,6 +45,12 @@ $current_module = get_current_module();
 
 // Get the branches that are reachable.
 $branch_list = explode("\n", shell_exec("git branch --merged"));
+// Sort it by version number with the highest first. This accounts for a
+// situation where we're on a branch such as 7.x-3.x, and 7.x-2.x is a direct
+// ancestor because it's had no further development since branching.
+usort($branch_list, 'version_compare');
+$branch_list = array_reverse($branch_list);
+
 $branches = array();
 
 // Analyse the list of branches obtained from git.

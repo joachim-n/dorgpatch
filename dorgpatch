@@ -34,7 +34,8 @@ $comment_number = $arg;
 $arg = drush_shift();
 $previous_comment_number = $arg;
 
-$dry_run = drush_get_option(['dry-run', 'n']);
+$dry_run  = drush_get_option(['dry-run', 'n']);
+$debug    = drush_get_option(['debug']);
 
 // Change directory to the actual place this script was run from, as Drush puts
 // us in the Drupal root.
@@ -50,6 +51,8 @@ $branch_list = explode("\n", shell_exec("git branch --merged"));
 // ancestor because it's had no further development since branching.
 usort($branch_list, 'version_compare');
 $branch_list = array_reverse($branch_list);
+
+if ($debug) { drush_print_r($branch_list); }
 
 $branches = array();
 

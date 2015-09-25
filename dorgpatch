@@ -24,6 +24,10 @@
  *  - previous_comment_number: TODO
  *
  * The following options may be used:
+ *  - --sequential: Write a sequential patch, that is, a patch file which lists
+ *      each separate commit on the branch rather. This can make a patch more
+ *      readable (provided the commits are clean) for large changes or multiple
+ *      renames.
  *  - --dry-run, n: Don't write any files.
  */
 
@@ -33,6 +37,8 @@ $comment_number = $arg;
 
 $arg = drush_shift();
 $previous_comment_number = $arg;
+
+$sequential = drush_get_option(['sequential']);
 
 $dry_run  = drush_get_option(['dry-run', 'n']);
 $debug    = drush_get_option(['debug']);
@@ -151,8 +157,16 @@ else {
 
 $patch_name = "$number.$current_module.$branch_description.patch";
 
+// Select the diff command to use.
+if ($sequential) {
+  $command = 'format-patch --stdout';
+}
+else {
+  $command = 'diff';
+}
+
 if (!$dry_run) {
-  shell_exec("git diff $master_branch > $patch_name");
+  shell_exec("git $command $master_branch > $patch_name");
 }
 
 drush_print_r("Written patch $patch_name with diff from $master_branch to local branch.");

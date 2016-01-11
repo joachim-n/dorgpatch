@@ -16,6 +16,14 @@
  *  - Your changes to tests are all on a branch whose name is of the format
  *    '1234-tests'. This should be merged into your feature branch.
  *
+ * Optional, to support also creating an interdiff file, one of:
+ *  - The most recent patch corresponds to a commit on the feature branch whose
+ *    subject is of the form 'patch COMMENT-NUMBER', the number of the comment
+ *    the patch was posted on.
+ *  - The most recent patch file is in the current folder, and the filename
+ *    contains both the issue number and the number of the comment it was posted
+ *    on.
+ *
  * The following optional parameters may be passed. If omitted, they will be
  * prompted for.
  *  - comment_number: The index number for the comment the patch will be posted
@@ -195,8 +203,11 @@ if (isset($tests_branch)) {
   shell_exec("git checkout -");
 }
 
-$previous_patch_name = get_previous_patch($issue_number, $previous_comment_number);
-//drush_print_r($previous_patch_name);
+// Try to do an interdiff, either from a previous patch or from an earlier
+// commit.
+$previous_patch_name = get_previous_patch_file($issue_number, $previous_comment_number);
+//drush_print_r("previous_patch_name: $previous_patch_name, previous_comment_number $previous_comment_number");
+$previous_patch_commit = get_previous_patch_commit($master_branch);
 
 if (!empty($previous_patch_name)) {
   // TODO: handle if no $previous_comment_number.
@@ -205,6 +216,26 @@ if (!empty($previous_patch_name)) {
   shell_exec("diff -up $previous_patch_name $patch_name > $interdiff_name");
 
   drush_print_r("Written interdiff $interdiff_name with diff from patch $previous_patch_name to new patch.");
+}
+
+if (!empty($previous_patch_commit)) {
+  if (empty($previous_comment_number)) {
+    // Assume the previous commit has a message of the form 'Patch COMMENT-NUMBER'.
+    $log_message = shell_exec('git show ' . $previous_patch_commit . ' -s --pretty=format:"%s"');
+    $matches = array();
+    preg_match('@patch\s(\d+)@i', $log_message, $matches);
+
+    // TODO: handle not found.
+    $previous_comment_number = $matches[1];
+  }
+
+  $interdiff_name = "$issue_number-$previous_comment_number-$comment_number.$current_module.$branch_description.interdiff.txt";
+
+  if (!empty($previous_comment_number)) {
+    shell_exec("git diff $previous_patch_commit > $interdiff_name");
+
+    drush_print_r("Written interdiff $interdiff_name with diff from git commit $previous_patch_commit to new patch.");
+  }
 }
 
 /**
@@ -232,7 +263,7 @@ function get_current_module() {
 /**
  * Find the previous patch to create an interdiff from.
  */
-function get_previous_patch($issue_number, $previous_comment_number) {
+function get_previous_patch_file($issue_number, $previous_comment_number) {
   if (!empty($previous_comment_number)) {
     // First try to spot a previous patch name writen by this script.
     $previous_patch_name = "$issue_number-$previous_comment_number.$current_module.$branch_description.patch";
@@ -253,4 +284,30 @@ function get_previous_patch($issue_number, $previous_comment_number) {
       }
     }
   }
+}
+
+/**
+ * Get the SHA of the previous patch commit.
+ */
+function get_previous_patch_commit($master_branch) {
+  $previous_patch_commit = NULL;
+
+  // Get the log of the current branch.
+  $log = shell_exec('git log --pretty=format:"%h %s" ' . "$master_branch..");
+  //drush_print_r($log);
+
+  $log_rows = explode("\n", $log);
+  // Skip the current HEAD commit, as it's what we're patching with now.
+  array_shift($log_rows);
+
+  foreach ($log_rows as $row) {
+    list($sha, $message) = explode(' ', $row);
+
+    if (preg_match('@patch@', $message)) {
+      $previous_patch_commit = $sha;
+      break;
+    }
+  }
+
+  return $previous_patch_commit;
 }

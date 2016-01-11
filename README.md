@@ -8,7 +8,7 @@ Requires the following setup:
    is the drupal.org issue number.
  - The feature branch is rebased to the major development branch you want to
    diff against.
- - All your work is committed.
+ - All your work is committed and the git working directory is clean.
 
 Optional, to also create a 'tests-only' patch:
  - Your changes to tests are all on a branch whose name is of the format
@@ -16,8 +16,9 @@ Optional, to also create a 'tests-only' patch:
 
 Optional, to support also creating an interdiff file, one of:
  - The most recent patch corresponds to a commit on the feature branch whose
-   subject is of the form 'patch COMMENT-NUMBER', the number of the comment
-   the patch was posted on.
+   subject is of the format 'patch 42', where 42 is the number of the comment
+   the patch was posted on. (You may of course have any number of commits
+   between this commit and the tip of the feature branch.)
  - The most recent patch file is in the current folder, and the filename
    contains both the issue number and the number of the comment it was posted
    on.

@@ -14,9 +14,22 @@ Optional, to also create a 'tests-only' patch:
  - Your changes to tests are all on a branch whose name is of the format
    '1234-tests'. This should be merged into your feature branch.
 
-Pass a parameter to give a comment number for the issue. Alternatively, the
-script can query drupal.org's API to get the number for the next comment on
-the issue.
+Optional, to support also creating an interdiff file, one of:
+ - The most recent patch corresponds to a commit on the feature branch whose
+   subject is of the form 'patch COMMENT-NUMBER', the number of the comment
+   the patch was posted on.
+ - The most recent patch file is in the current folder, and the filename
+   contains both the issue number and the number of the comment it was posted
+   on.
+
+The following optional parameters may be passed. If omitted, they will be
+prompted for.
+ - comment_number: The index number for the comment the patch will be posted
+   on. One of:
+   - a numeric value for the comment number for the issue.
+   - '?' to query drupal.org's API to get the number for the next comment
+      on the issue.
+   - 'x' to not add a comment number to the patch na,e
 
 ## Example
 
@@ -25,7 +38,10 @@ Suppose:
   - You are on branch '1234-fix-everything', which branches off 8.x-4.x.
   - There is also a branch '1234-tests', which branches off 8.x-4.x
   - The most recent comment on www.drupal.org/node/1234 is #5.
+  - There was an earlier patch at comment #2, which you based your work on,
+    committing it to your feature branch with the commit message 'patch 2'.
 
 Then this script will create the following patch files, diffing from 8.x-4.x:
   - 1234-6.flag.fix-everything.patch
   - 1234-6.flag.fix-everything-tests-only.patch
+  - 1234-2-6.flag.fix-everything.interdiff.txt

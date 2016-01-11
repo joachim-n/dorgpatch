@@ -29,7 +29,7 @@ prompted for.
    - a numeric value for the comment number for the issue.
    - '?' to query drupal.org's API to get the number for the next comment
       on the issue.
-   - 'x' to not add a comment number to the patch na,e
+   - 'x' to not add a comment number to the patch.
 
 ## Example
 

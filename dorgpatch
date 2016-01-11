@@ -18,9 +18,12 @@
  *
  * The following optional parameters may be passed. If omitted, they will be
  * prompted for.
- *  - comment_number: the comment number for the issue. Alternatively, the
- *    script can query drupal.org's API to get the number for the next comment
- *    on the issue.
+ *  - comment_number: The index number for the comment the patch will be posted
+ *    on. One of:
+ *    - the comment number for the issue.
+ *    - '?' to query drupal.org's API to get the number for the next comment
+ *      on the issue.
+ *    - 'x' to not add a comment number to the patch na,e
  *  - previous_comment_number: TODO
  *
  * The following options may be used:
@@ -132,6 +135,11 @@ if (isset($tests_branch)) {
 
 if (!isset($comment_number)) {
   $comment_number = drush_prompt("Enter the comment number, or '?' to query drupal.org's API for it, or <enter> to skip", '', FALSE);
+}
+
+// Don't use a comment nmber.
+if ($comment_number == 'x') {
+  $comment_number = NULL;
 }
 
 // Get the comment number from drupal.org's API.

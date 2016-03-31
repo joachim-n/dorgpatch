@@ -205,7 +205,7 @@ if (isset($tests_branch)) {
 
 // Try to do an interdiff, either from a previous patch or from an earlier
 // commit.
-$previous_patch_name = get_previous_patch_file($issue_number, $previous_comment_number);
+$previous_patch_name = get_previous_patch_file($issue_number, $previous_comment_number, $comment_number);
 //drush_print_r("previous_patch_name: $previous_patch_name, previous_comment_number $previous_comment_number");
 $previous_patch_commit = get_previous_patch_commit($master_branch);
 
@@ -263,7 +263,7 @@ function get_current_module() {
 /**
  * Find the previous patch to create an interdiff from.
  */
-function get_previous_patch_file($issue_number, $previous_comment_number) {
+function get_previous_patch_file($issue_number, &$previous_comment_number = NULL, $comment_number = NULL) {
   if (!empty($previous_comment_number)) {
     // First try to spot a previous patch name writen by this script.
     $previous_patch_name = "$issue_number-$previous_comment_number.$current_module.$branch_description.patch";
@@ -283,6 +283,44 @@ function get_previous_patch_file($issue_number, $previous_comment_number) {
         return $previous_patch_name;
       }
     }
+  }
+  else {
+    // No comment number given for a previous patch.
+    // Look at all patch files that contain the issue number.
+    $iterator = new FilesystemIterator(".");
+    $filter = new RegexIterator($iterator, "@.*{$issue_number}.*\.patch@");
+    $filelist = array();
+    foreach ($filter as $file) {
+      $filename = $file->getFilename();
+
+      // Skip the current comment number, in case the script has been run
+      // several times and has already created a patch for this comment.
+      // (E.g. the user has made a patch but spotted things to fix before
+      // uploading it.)
+      if (preg_match("@\b{$comment_number}\b@", $filename)) {
+        continue;
+      }
+
+      $matches = array();
+      preg_match("@{$issue_number}[-._](\d+)@", $filename, $matches);
+      $comment_id = $matches[1];
+
+      $filelist[$comment_id] = $filename;
+    }
+
+    // Sort the array by the comment ID.
+    ksort($filelist);
+    print_r($filelist);
+
+    // Get the last filename and comment number.
+    end($filelist);
+    $previous_patch_name = current($filelist);
+
+    // Set the previous comment number now that we know it. (Yes this is really
+    // ugly!!!)
+    $previous_comment_number = key($filelist);
+
+    return $previous_patch_name;
   }
 }
 

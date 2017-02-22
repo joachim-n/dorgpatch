@@ -1,6 +1,8 @@
 # dorgpatch
 Drush shell script to create patches for drupal.org issues.
 
+** This has been superseded by Dorgflow: https://github.com/joachim-n/dorgflow **
+
 Requires the following setup:
 
  - You are on a git feature branch for your issue.
